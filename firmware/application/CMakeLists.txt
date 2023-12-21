@@ -166,7 +166,7 @@ set(CPPSRC
 	${COMMON}/portapack_persistent_memory.cpp
 	${COMMON}/portapack_shared_memory.cpp
 	${COMMON}/sonde_packet.cpp
-	# ${COMMON}/test_packet.cpp
+	${COMMON}/test_packet.cpp
 	${COMMON}/tpms_packet.cpp
 	${COMMON}/ui.cpp
 	${COMMON}/ui_focus.cpp
@@ -185,7 +185,7 @@ set(CPPSRC
 	core_control.cpp
 	database.cpp
 	de_bruijn.cpp
-	#emu_cc1101.cpp
+	emu_cc1101.cpp
 	rfm69.cpp
 	event_m0.cpp
 	file_reader.cpp
@@ -259,16 +259,16 @@ set(CPPSRC
 	apps/acars_app.cpp
 	apps/ais_app.cpp
 	apps/analog_audio_app.cpp
-	# apps/analog_tv_app.cpp
+	#apps/analog_tv_app.cpp
 	apps/ble_comm_app.cpp
 	apps/ble_rx_app.cpp
 	apps/ble_tx_app.cpp
 	apps/capture_app.cpp
 	apps/ert_app.cpp
 	apps/gps_sim_app.cpp
-	# apps/lge_app.cpp
+	#apps/lge_app.cpp
 	apps/pocsag_app.cpp
-	# apps/replay_app.cpp
+	apps/replay_app.cpp
 	apps/soundboard_app.cpp
 	apps/tpms_app.cpp
 	apps/tpms_app.cpp
@@ -279,7 +279,7 @@ set(CPPSRC
 	apps/ui_aprs_tx.cpp
 	apps/ui_bht_tx.cpp
 	apps/ui_btle_rx.cpp
-	# apps/ui_coasterp.cpp
+	#apps/ui_coasterp.cpp
 	apps/ui_debug.cpp
 	apps/ui_dfu_menu.cpp
 	apps/ui_encoders.cpp
@@ -288,16 +288,16 @@ set(CPPSRC
 	apps/ui_freqman.cpp
 	apps/ui_fsk_rx.cpp
 	apps/ui_iq_trim.cpp
-	# apps/ui_jammer.cpp
-    # apps/ui_keyfob.cpp
-	# apps/ui_lcr.cpp
+	#apps/ui_jammer.cpp
+    apps/ui_keyfob.cpp
+	#apps/ui_lcr.cpp
 	apps/ui_level.cpp  
 	apps/ui_looking_glass_app.cpp
 	apps/ui_mictx.cpp
 	apps/ui_modemsetup.cpp
 	apps/ui_morse.cpp
-	# apps/ui_nrf_rx.cpp
-	# apps/ui_nuoptix.cpp
+	#apps/ui_nrf_rx.cpp
+	apps/ui_nuoptix.cpp
 	apps/ui_playlist.cpp
 	apps/ui_pocsag_tx.cpp
 	apps/ui_rds.cpp
@@ -317,7 +317,7 @@ set(CPPSRC
 	apps/ui_ss_viewer.cpp
 	apps/ui_sstvtx.cpp
 	apps/ui_subghzd.cpp
-	# apps/ui_test.cpp
+	apps/ui_test.cpp
 	apps/ui_text_editor.cpp
 	apps/ui_tone_search.cpp
 	apps/ui_touch_calibration.cpp
@@ -330,14 +330,14 @@ set(CPPSRC
 	protocols/bht.cpp
 	protocols/dcs.cpp
 	protocols/encoders.cpp
-	# protocols/lcr.cpp
+	#protocols/lcr.cpp
 	protocols/modems.cpp
 	protocols/rds.cpp
-	# ui_handwrite.cpp
-	# ui_loadmodule.cpp
-	# ui_numbers.cpp
-	# ui_replay_view.cpp
-	# ui_script.cpp
+	ui_handwrite.cpp
+	ui_loadmodule.cpp
+	#ui_numbers.cpp
+	#ui_replay_view.cpp
+	#ui_script.cpp
 	ui_sd_card_debug.cpp
 	config_mode.cpp
 	${CPLD_20150901_DATA_CPP}
