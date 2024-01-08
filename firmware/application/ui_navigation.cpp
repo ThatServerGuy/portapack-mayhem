@@ -70,7 +70,7 @@
 #include "ui_settings.hpp"
 #include "ui_siggen.hpp"
 #include "ui_sonde.hpp"
-#include "ui_spectrum_painter.hpp"
+// #include "ui_spectrum_painter.hpp" //moved to ext app
 #include "ui_ss_viewer.hpp"
 #include "ui_sstvtx.hpp"
 #include "ui_styles.hpp"
@@ -93,7 +93,7 @@
 #include "ble_tx_app.hpp"
 #include "capture_app.hpp"
 #include "ert_app.hpp"
-#include "gps_sim_app.hpp"
+// #include "gps_sim_app.hpp" //moved to ext
 // #include "lge_app.hpp" //moved to ext
 #include "pocsag_app.hpp"
 #include "replay_app.hpp"
@@ -110,6 +110,169 @@ using portapack::transmitter_model;
 namespace pmem = portapack::persistent_memory;
 
 namespace ui {
+
+// When adding or removing apps from the Menu, please update it here:
+std::vector<AppInfoConsole> NavigationView::fixedAppListFC = {
+    {"adsbrx", "ADS-B", RX},
+    {"ais", "AIS Boats", RX},
+    {"aprsrx", "APRS", RX},
+    {"audio", "Audio", RX},
+    {"blerx", "BLE Rx", RX},
+    {"ert", "ERT Meter", RX},
+    {"level", "Level", RX},
+    {"pocsagrx", "POCSAG", RX},
+    {"radiosnde", "Radiosnde", RX},
+    {"recon", "Recon", RX},
+    {"search", "Search", RX},
+    {"tpms", "TPMS Cars", RX},
+    {"weather", "Weather", RX},
+    {"subghzd", "SubGhzD", RX},
+    {"adsbtx", "ADS-B", TX},
+    {"aprstx", "APRS TX", TX},
+    {"bht", "BHT Xy/EP", TX},
+    {"bletx", "BLE Tx", TX},
+    {"morsetx", "Morse", TX},
+    {"ooktx", "OOK", TX},
+    {"pocsatx", "POCSAG TX", TX},
+    {"rdstx", "RDS TX", TX},
+    {"soundbrd", "Soundbrd", TX},
+    {"sstvtx", "SSTV", TX},
+    {"touchtune", "TouchTune", TX},
+    {"capture", "Capture", RX},
+    {"replay", "Replay", TX},
+    {"remote", "Remote", TX},
+    {"scanner", "Scanner", RX},
+    {"microphone", "Microphone", TX},
+    {"lookingglass", "Looking Glass", RX}};
+
+bool NavigationView::StartAppByName(const char* name) {
+    pop();
+    if (strcmp(name, "adsbrx") == 0) {
+        push<ADSBRxView>();
+        return true;
+    }
+    if (strcmp(name, "ais") == 0) {
+        push<AISAppView>();
+        return true;
+    }
+    if (strcmp(name, "aprsrx") == 0) {
+        push<APRSRXView>();
+        return true;
+    }
+    if (strcmp(name, "audio") == 0) {
+        push<AnalogAudioView>();
+        return true;
+    }
+    if (strcmp(name, "blerx") == 0) {
+        push<BLERxView>();
+        return true;
+    }
+    if (strcmp(name, "ert") == 0) {
+        push<ERTAppView>();
+        return true;
+    }
+    if (strcmp(name, "level") == 0) {
+        push<LevelView>();
+        return true;
+    }
+    if (strcmp(name, "pocsagrx") == 0) {
+        push<POCSAGAppView>();
+        return true;
+    }
+    if (strcmp(name, "radiosnode") == 0) {
+        push<SondeView>();
+        return true;
+    }
+    if (strcmp(name, "recon") == 0) {
+        push<ReconView>();
+        return true;
+    }
+    if (strcmp(name, "search") == 0) {
+        push<SearchView>();
+        return true;
+    }
+    if (strcmp(name, "tpms") == 0) {
+        push<TPMSAppView>();
+        return true;
+    }
+    if (strcmp(name, "weather") == 0) {
+        push<WeatherView>();
+        return true;
+    }
+    if (strcmp(name, "subghzd") == 0) {
+        push<SubGhzDView>();
+        return true;
+    }
+    if (strcmp(name, "adsbtx") == 0) {
+        push<ADSBTxView>();
+        return true;
+    }
+    if (strcmp(name, "aprstx") == 0) {
+        push<APRSTXView>();
+        return true;
+    }
+    if (strcmp(name, "bht") == 0) {
+        push<BHTView>();
+        return true;
+    }
+    if (strcmp(name, "bletx") == 0) {
+        push<BLETxView>();
+        return true;
+    }
+    if (strcmp(name, "morsetx") == 0) {
+        push<MorseView>();
+        return true;
+    }
+    if (strcmp(name, "ooktx") == 0) {
+        push<EncodersView>();
+        return true;
+    }
+    if (strcmp(name, "pocsatx") == 0) {
+        push<POCSAGTXView>();
+        return true;
+    }
+    if (strcmp(name, "rdstx") == 0) {
+        push<RDSView>();
+        return true;
+    }
+    if (strcmp(name, "soundbrd") == 0) {
+        push<SoundBoardView>();
+        return true;
+    }
+    if (strcmp(name, "sstvtx") == 0) {
+        push<SSTVTXView>();
+        return true;
+    }
+    if (strcmp(name, "touchtune") == 0) {
+        push<TouchTunesView>();
+        return true;
+    }
+    if (strcmp(name, "capture") == 0) {
+        push<CaptureAppView>();
+        return true;
+    }
+    if (strcmp(name, "replay") == 0) {
+        push<PlaylistView>();
+        return true;
+    }
+    if (strcmp(name, "remote") == 0) {
+        push<RemoteView>();
+        return true;
+    }
+    if (strcmp(name, "scanner") == 0) {
+        push<ScannerView>();
+        return true;
+    }
+    if (strcmp(name, "microphone") == 0) {
+        push<MicTXView>();
+        return true;
+    }
+    if (strcmp(name, "lookingglass") == 0) {
+        push<GlassView>();
+        return true;
+    }
+    return false;
+}
 
 /* StatusTray ************************************************************/
 
@@ -172,6 +335,9 @@ SystemStatusView::SystemStatusView(
     if (pmem::should_use_sdcard_for_pmem()) {
         pmem::load_persistent_settings_from_file();
     }
+
+    // configure CLKOUT per pmem setting
+    portapack::clock_manager.enable_clock_output(pmem::clkout_enabled());
 
     // force apply of selected sdcard speed override at UI startup
     pmem::set_config_sdcard_high_speed_io(pmem::config_sdcard_high_speed_io(), false);
@@ -438,7 +604,17 @@ InformationView::InformationView(
                   &version,
                   &ltime});
 
+#if GCC_VERSION_MISMATCH
+    static constexpr Style style_gcc_warning{
+        .font = font::fixed_8x16,
+        .background = {33, 33, 33},
+        .foreground = Color::yellow(),
+    };
+    version.set_style(&style_gcc_warning);
+#else
     version.set_style(&style_infobar);
+#endif
+
     ltime.set_style(&style_infobar);
     refresh();
     set_dirty();
@@ -594,7 +770,7 @@ TransmittersMenuView::TransmittersMenuView(NavigationView& nav) {
         {"BHT Xy/EP", ui::Color::green(), &bitmap_icon_bht, [&nav]() { nav.push<BHTView>(); }},
         {"BLE Tx", ui::Color::green(), &bitmap_icon_btle, [&nav]() { nav.push<BLETxView>(); }},
         // {"BurgerPgr", ui::Color::yellow(), &bitmap_icon_burger, [&nav]() { nav.push<CoasterPagerView>(); }}, //moved to ext
-        {"GPS Sim", ui::Color::green(), &bitmap_icon_gps_sim, [&nav]() { nav.push<GpsSimAppView>(); }},
+        //{"GPS Sim", ui::Color::green(), &bitmap_icon_gps_sim, [&nav]() { nav.push<GpsSimAppView>(); }}, //moved to ext
         //{"Jammer", ui::Color::green(), &bitmap_icon_jammer, [&nav]() { nav.push<JammerView>(); }}, //moved to ext
         // { "Key fob", ui::Color::orange(), &bitmap_icon_keyfob, [&nav](){ nav.push<KeyfobView>(); }},
         // {"LGE", ui::Color::yellow(), &bitmap_icon_lge, [&nav]() { nav.push<LGEView>(); }}, //moved to ext
@@ -604,7 +780,7 @@ TransmittersMenuView::TransmittersMenuView(NavigationView& nav) {
         {"POCSAG TX", ui::Color::green(), &bitmap_icon_pocsag, [&nav]() { nav.push<POCSAGTXView>(); }},
         {"RDS", ui::Color::green(), &bitmap_icon_rds, [&nav]() { nav.push<RDSView>(); }},
         {"Soundbrd", ui::Color::green(), &bitmap_icon_soundboard, [&nav]() { nav.push<SoundBoardView>(); }},
-        {"S.Painter", ui::Color::orange(), &bitmap_icon_paint, [&nav]() { nav.push<SpectrumPainterView>(); }},
+        //{"S.Painter", ui::Color::orange(), &bitmap_icon_paint, [&nav]() { nav.push<SpectrumPainterView>(); }},
         {"SSTV", ui::Color::green(), &bitmap_icon_sstv, [&nav]() { nav.push<SSTVTXView>(); }},
         // {"TEDI/LCR", ui::Color::yellow(), &bitmap_icon_lcr, [&nav]() { nav.push<LCRView>(); }}, //moved to ext
         {"TouchTune", ui::Color::green(), &bitmap_icon_touchtunes, [&nav]() { nav.push<TouchTunesView>(); }},
@@ -738,6 +914,9 @@ SystemView::SystemView(
 Context& SystemView::context() const {
     return context_;
 }
+NavigationView* SystemView::get_navigation_view() {
+    return &navigation_view;
+}
 
 void SystemView::toggle_overlay() {
     switch (++overlay_active) {
@@ -745,7 +924,7 @@ void SystemView::toggle_overlay() {
             this->add_child(&this->overlay);
             this->set_dirty();
             shared_memory.request_m4_performance_counter = 1;
-            shared_memory.m4_cpu_usage = 0;
+            shared_memory.m4_performance_counter = 0;
             shared_memory.m4_heap_usage = 0;
             shared_memory.m4_stack_usage = 0;
             break;
@@ -753,11 +932,12 @@ void SystemView::toggle_overlay() {
             this->remove_child(&this->overlay);
             this->add_child(&this->overlay2);
             this->set_dirty();
-            shared_memory.request_m4_performance_counter = 0;
+            shared_memory.request_m4_performance_counter = 2;
             break;
         case 3:
             this->remove_child(&this->overlay2);
             this->set_dirty();
+            shared_memory.request_m4_performance_counter = 0;
             overlay_active = 0;
             break;
     }

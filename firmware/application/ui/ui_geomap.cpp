@@ -38,13 +38,17 @@ namespace ui {
 
 GeoPos::GeoPos(
     const Point pos,
-    const alt_unit altitude_unit)
-    : altitude_unit_(altitude_unit) {
+    const alt_unit altitude_unit,
+    const spd_unit speed_unit)
+    : altitude_unit_(altitude_unit), speed_unit_(speed_unit) {
     set_parent_rect({pos, {30 * 8, 3 * 16}});
 
     add_children({&labels_position,
+                  &label_spd_position,
                   &field_altitude,
+                  &field_speed,
                   &text_alt_unit,
+                  &text_speed_unit,
                   &field_lat_degrees,
                   &field_lat_minutes,
                   &field_lat_seconds,
@@ -56,6 +60,7 @@ GeoPos::GeoPos(
 
     // Defaults
     set_altitude(0);
+    set_speed(0);
     set_lat(0);
     set_lon(0);
 
@@ -67,10 +72,11 @@ GeoPos::GeoPos(
         text_lon_decimal.set(to_string_decimal(lon_value, 5));
 
         if (on_change && report_change)
-            on_change(altitude(), lat_value, lon_value);
+            on_change(altitude(), lat_value, lon_value, speed());
     };
 
     field_altitude.on_change = changed_fn;
+    field_speed.on_change = changed_fn;
     field_lat_degrees.on_change = changed_fn;
     field_lat_minutes.on_change = changed_fn;
     field_lat_seconds.on_change = changed_fn;
@@ -79,11 +85,19 @@ GeoPos::GeoPos(
     field_lon_seconds.on_change = changed_fn;
 
     text_alt_unit.set(altitude_unit_ ? "m" : "ft");
+    if (speed_unit_ == KMPH) text_speed_unit.set("kmph");
+    if (speed_unit_ == MPH) text_speed_unit.set("mph");
+    if (speed_unit_ == HIDDEN) {
+        text_speed_unit.hidden(true);
+        label_spd_position.hidden(true);
+        field_speed.hidden(true);
+    }
 }
 
 void GeoPos::set_read_only(bool v) {
     // only setting altitude to read-only (allow manual panning via lat/lon fields)
     field_altitude.set_focusable(!v);
+    field_speed.set_focusable(!v);
 }
 
 // Stupid hack to avoid an event loop
@@ -98,13 +112,17 @@ void GeoPos::focus() {
         field_lat_degrees.focus();
 }
 
-void GeoPos::hide_altitude() {
+void GeoPos::hide_altandspeed() {
     // Color altitude grey to indicate it's not updated in manual panning mode
     field_altitude.set_style(&Styles::grey);
+    field_speed.set_style(&Styles::grey);
 }
 
 void GeoPos::set_altitude(int32_t altitude) {
     field_altitude.set_value(altitude);
+}
+void GeoPos::set_speed(int32_t speed) {
+    field_speed.set_value(speed);
 }
 
 void GeoPos::set_lat(float lat) {
@@ -139,21 +157,38 @@ int32_t GeoPos::altitude() {
     return field_altitude.value();
 };
 
+int32_t GeoPos::speed() {
+    return field_speed.value();
+};
+
 GeoMap::GeoMap(
     Rect parent_rect)
     : Widget{parent_rect}, markerListLen(0) {
 }
 
 bool GeoMap::on_encoder(const EncoderEvent delta) {
-    if ((delta > 0) && (map_zoom < 5)) {
-        map_zoom++;
+    // Valid map_zoom values are -2 to -MAX_MAP_ZOOM_OUT, and +1 to +MAX_MAP_ZOOM_IN (values of 0 and -1 are not permitted)
+    if (delta > 0) {
+        if (map_zoom < MAX_MAP_ZOOM_IN) {
+            if (map_zoom == -2) {
+                map_zoom = 1;
+            } else {
+                map_zoom++;
 
-        // Ensure that MOD(240,map_zoom)==0 for the map_zoom_line() function
-        if (geomap_rect_width % map_zoom != 0) {
-            map_zoom--;
+                // When zooming in, ensure that MOD(240,map_zoom)==0 for the map_zoom_line() function
+                if ((map_zoom > 1) && (geomap_rect_width % map_zoom != 0)) {
+                    map_zoom--;
+                }
+            }
         }
-    } else if ((delta < 0) && (map_zoom > 1)) {
-        map_zoom--;
+    } else if (delta < 0) {
+        if (map_zoom > -MAX_MAP_ZOOM_OUT) {
+            if (map_zoom == 1) {
+                map_zoom = -2;
+            } else {
+                map_zoom--;
+            }
+        }
     } else {
         return false;
     }
@@ -164,17 +199,31 @@ bool GeoMap::on_encoder(const EncoderEvent delta) {
     return true;
 }
 
-void GeoMap::map_zoom_line(ui::Color* buffer) {
-    if (map_zoom <= 1) {
-        return;
-    }
+void GeoMap::map_read_line(ui::Color* buffer, uint16_t pixels) {
+    if (map_zoom == 1) {
+        map_file.read(buffer, pixels << 1);
+    } else if (map_zoom > 1) {
+        map_file.read(buffer, (pixels / map_zoom) << 1);
 
-    // As long as MOD(width,map_zoom)==0 then we don't need to check buffer overflow case when stretching last pixel;
-    // For 240 width, than means no check is needed for map_zoom values up to 6
-    for (int i = (geomap_rect_width / map_zoom) - 1; i >= 0; i--) {
-        for (int j = 0; j < map_zoom; j++) {
-            buffer[(i * map_zoom) + j] = buffer[i];
+        // Zoom in: Expand each pixel to "map_zoom" number of pixels.
+        // Future TODO:  Add dithering to smooth out the pixelation.
+        // As long as MOD(width,map_zoom)==0 then we don't need to check buffer overflow case when stretching last pixel;
+        // For 240 width, than means no check is needed for map_zoom values up to 6
+        for (int i = (geomap_rect_width / map_zoom) - 1; i >= 0; i--) {
+            for (int j = 0; j < map_zoom; j++) {
+                buffer[(i * map_zoom) + j] = buffer[i];
+            }
         }
+    } else {
+        ui::Color* zoom_out_buffer = new ui::Color[(pixels * (-map_zoom))];
+        map_file.read(zoom_out_buffer, (pixels * (-map_zoom)) << 1);
+
+        // Zoom out:  Collapse each group of "-map_zoom" pixels into one pixel.
+        // Future TODO: Average each group of pixels (in both X & Y directions if possible).
+        for (int i = 0; i < geomap_rect_width; i++) {
+            buffer[i] = zoom_out_buffer[i * (-map_zoom)];
+        }
+        delete zoom_out_buffer;
     }
 }
 
@@ -187,9 +236,12 @@ void GeoMap::draw_markers(Painter& painter) {
         int x = (map_width * (item.lon + 180) / 360) - x_pos;
         int y = (map_height - ((map_world_lon / 2 * log((1 + lat_rad) / (1 - lat_rad))) - map_offset)) - y_pos;  // Offset added for the GUI
 
-        if (map_zoom != 1) {
+        if (map_zoom > 1) {
             x = ((x - (r.width() / 2)) * map_zoom) + (r.width() / 2);
             y = ((y - (r.height() / 2)) * map_zoom) + (r.height() / 2);
+        } else if (map_zoom < 0) {
+            x = ((x - (r.width() / 2)) / (-map_zoom)) + (r.width() / 2);
+            y = ((y - (r.height() / 2)) / (-map_zoom)) + (r.height() / 2);
         }
 
         if ((x >= 0) && (x < r.width()) &&
@@ -208,31 +260,39 @@ void GeoMap::draw_markers(Painter& painter) {
 }
 
 void GeoMap::paint(Painter& painter) {
-    uint16_t line, j;
-    uint32_t zoom_seek_x, zoom_seek_y;
-    std::array<ui::Color, 240> map_line_buffer;
     const auto r = screen_rect();
+    std::array<ui::Color, 240> map_line_buffer;
 
     // Ony redraw map if it moved by at least 1 pixel
     // or the markers list was updated
     int x_diff = abs(x_pos - prev_x_pos);
     int y_diff = abs(y_pos - prev_y_pos);
-    if (markerListUpdated || (x_diff >= map_zoom * 3) || (y_diff >= map_zoom * 3)) {
-        if (map_zoom == 1) {
-            zoom_seek_x = zoom_seek_y = 0;
-        } else {
-            zoom_seek_x = (r.width() - (r.width() / map_zoom)) / 2;
-            zoom_seek_y = (r.height() - (r.height() / map_zoom)) / 2;
+
+    if (markerListUpdated || (x_diff >= 3) || (y_diff >= 3)) {
+        int32_t zoom_seek_x = x_pos;
+        int32_t zoom_seek_y = y_pos;
+
+        // Adjust starting corner position of map per zoom setting
+        if (map_zoom > 1) {
+            zoom_seek_x += (r.width() - (r.width() / map_zoom)) / 2;
+            zoom_seek_y += (r.height() - (r.height() / map_zoom)) / 2;
+        } else if (map_zoom < 0) {
+            zoom_seek_x += (r.width() - (r.width() * (-map_zoom))) / 2;
+            zoom_seek_y += (r.height() - (r.height() * (-map_zoom))) / 2;
         }
 
-        for (line = 0; line < (r.height() / map_zoom); line++) {
-            map_file.seek(4 + ((x_pos + zoom_seek_x + (map_width * (y_pos + line + zoom_seek_y))) << 1));
-            map_file.read(map_line_buffer.data(), (r.width() / map_zoom) << 1);
-            map_zoom_line(map_line_buffer.data());
-            for (j = 0; j < map_zoom; j++) {
-                display.draw_pixels({0, r.top() + (line * map_zoom) + j, r.width(), 1}, map_line_buffer);
+        // Read from map file and display to zoomed scale
+        int duplicate_lines = (map_zoom < 0) ? 1 : map_zoom;
+        for (uint16_t line = 0; line < (r.height() / duplicate_lines); line++) {
+            uint16_t seek_line = zoom_seek_y + ((map_zoom >= 0) ? line : line * (-map_zoom));
+            map_file.seek(4 + ((zoom_seek_x + (map_width * seek_line)) << 1));
+            map_read_line(map_line_buffer.data(), r.width());
+
+            for (uint16_t j = 0; j < duplicate_lines; j++) {
+                display.draw_pixels({0, r.top() + (line * duplicate_lines) + j, r.width(), 1}, map_line_buffer);
             }
         }
+
         prev_x_pos = x_pos;
         prev_y_pos = y_pos;
 
@@ -253,6 +313,13 @@ void GeoMap::paint(Painter& painter) {
     if (!manual_panning_) {
         draw_marker(painter, r.center(), angle_, tag_, Color::red(), Color::white(), Color::black());
     }
+}
+
+bool GeoMap::on_keyboard(KeyboardEvent key) {
+    if (key == '+' || key == ' ') return on_encoder(1);
+    if (key == '-') return on_encoder(-1);
+
+    return false;
 }
 
 bool GeoMap::on_touch(const TouchEvent event) {
@@ -323,8 +390,8 @@ bool GeoMap::manual_panning() {
 }
 
 void GeoMap::draw_scale(Painter& painter) {
-    uint16_t km = 100;
-    uint16_t scale_width = km * pixels_per_km * map_zoom;
+    uint16_t km = 800;
+    uint16_t scale_width = (map_zoom > 0) ? km * pixels_per_km * map_zoom : km * pixels_per_km / (-map_zoom);
 
     while (scale_width > screen_width / 2) {
         scale_width /= 2;
@@ -413,7 +480,7 @@ void GeoMapView::focus() {
         nav_.display_modal("No map", "No world_map.bin file in\n/ADSB/ directory", ABORT);
 }
 
-void GeoMapView::update_position(float lat, float lon, uint16_t angle, int32_t altitude) {
+void GeoMapView::update_position(float lat, float lon, uint16_t angle, int32_t altitude, int32_t speed) {
     if (geomap.manual_panning()) {
         geomap.set_dirty();
         return;
@@ -422,12 +489,14 @@ void GeoMapView::update_position(float lat, float lon, uint16_t angle, int32_t a
     lat_ = lat;
     lon_ = lon;
     altitude_ = altitude;
+    speed_ = speed;
 
     // Stupid hack to avoid an event loop
     geopos.set_report_change(false);
     geopos.set_lat(lat_);
     geopos.set_lon(lon_);
     geopos.set_altitude(altitude_);
+    geopos.set_speed(speed_);
     geopos.set_report_change(true);
 
     geomap.set_angle(angle);
@@ -446,11 +515,12 @@ void GeoMapView::setup() {
     geopos.set_lat(lat_);
     geopos.set_lon(lon_);
 
-    geopos.on_change = [this](int32_t altitude, float lat, float lon) {
+    geopos.on_change = [this](int32_t altitude, float lat, float lon, int32_t speed) {
         altitude_ = altitude;
         lat_ = lat;
         lon_ = lon;
-        geopos.hide_altitude();
+        speed_ = speed;
+        geopos.hide_altandspeed();
         geomap.set_manual_panning(true);
         geomap.move(lon_, lat_);
         geomap.set_dirty();
@@ -482,6 +552,7 @@ GeoMapView::GeoMapView(
     const std::string& tag,
     int32_t altitude,
     GeoPos::alt_unit altitude_unit,
+    GeoPos::spd_unit speed_unit,
     float lat,
     float lon,
     uint16_t angle,
@@ -489,6 +560,7 @@ GeoMapView::GeoMapView(
     : nav_(nav),
       altitude_(altitude),
       altitude_unit_(altitude_unit),
+      speed_unit_(speed_unit),
       lat_(lat),
       lon_(lon),
       angle_(angle),
@@ -516,12 +588,14 @@ GeoMapView::GeoMapView(
     NavigationView& nav,
     int32_t altitude,
     GeoPos::alt_unit altitude_unit,
+    GeoPos::spd_unit speed_unit,
     float lat,
     float lon,
-    const std::function<void(int32_t, float, float)> on_done)
+    const std::function<void(int32_t, float, float, int32_t)> on_done)
     : nav_(nav),
       altitude_(altitude),
       altitude_unit_(altitude_unit),
+      speed_unit_(speed_unit),
       lat_(lat),
       lon_(lon) {
     mode_ = PROMPT;
@@ -540,7 +614,7 @@ GeoMapView::GeoMapView(
 
     button_ok.on_select = [this, on_done, &nav](Button&) {
         if (on_done)
-            on_done(altitude_, lat_, lon_);
+            on_done(altitude_, lat_, lon_, speed_);
         nav.pop();
     };
 }
